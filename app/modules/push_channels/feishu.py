@@ -100,13 +100,17 @@ class FeishuChannel(BaseChannel):
     def _send_video(self, content_data: Dict[str, Any]) -> bool:
         """推送视频消息"""
         title = content_data.get("title", "无标题")
+        uploader_name = content_data.get("uploader_name", "")
         summary = content_data.get("summary", "")
         url = content_data.get("url", "")
         tags = content_data.get("tags", [])
         stocks = content_data.get("stocks", [])
         doc_url = content_data.get("doc_url", "")
 
-        text = f"📺 新视频\n\n{title}\n\n"
+        if uploader_name:
+            text = f"📺 [{uploader_name}]{title}\n\n"
+        else:
+            text = f"📺 {title}\n\n"
         if summary:
             text += f"{summary}\n\n"
         if stocks:
@@ -122,6 +126,7 @@ class FeishuChannel(BaseChannel):
     def _send_dynamic(self, content_data: Dict[str, Any]) -> bool:
         """推送动态消息（使用卡片）"""
         title = content_data.get("title", "")
+        uploader_name = content_data.get("uploader_name", "")
         text = content_data.get("text", "")
         url = content_data.get("url", "")
         pub_time = content_data.get("pub_time", "")
@@ -150,13 +155,20 @@ class FeishuChannel(BaseChannel):
                 image_keys.append(image_key)
 
         # 构建卡片元素
+
+        # 标题（包含UP主名字）
+        if uploader_name:
+            title_text = f"📝 [{uploader_name}]{title}" if title else f"📝 [{uploader_name}]新动态"
+        else:
+            title_text = f"📝 {title}" if title else "📝 新动态"
+
         elements = []
 
         # 标题（如果有）
         if title:
             elements.append({
                 "tag": "div",
-                "text": {"tag": "lark_md", "content": f"**{title}**"}
+                "text": {"tag": "lark_md", "content": f"**{title_text}**"}
             })
 
         # 文本内容
@@ -189,7 +201,7 @@ class FeishuChannel(BaseChannel):
         card = {
             "config": {"wide_screen_mode": True},
             "header": {
-                "title": {"tag": "plain_text", "text": f"📝 {title}" if title else "📝 新动态"},
+                "title": {"tag": "plain_text", "text": title_text},
                 "template": "blue"
             },
             "elements": elements

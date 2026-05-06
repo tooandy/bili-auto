@@ -34,15 +34,22 @@ class WechatChannel(BaseChannel):
     def _send_video(self, content_data: Dict[str, Any]) -> bool:
         """推送视频消息"""
         title = content_data.get("title", "无标题")
+        uploader_name = content_data.get("uploader_name", "")
         summary = content_data.get("summary", "")
         url = content_data.get("url", "")
         description = (summary or content_data.get("text", ""))[:200]
         picurl = (content_data.get("image_urls") or [""])[0]
+
+        if uploader_name:
+            title = f"📺 [{uploader_name}]{title}"
+        else:
+            title = f"📺 {title}"
         return self._send_article(title, description, url, picurl)
 
     def _send_dynamic(self, content_data: Dict[str, Any]) -> bool:
         """推送动态消息"""
         title = content_data.get("title", "")
+        uploader_name = content_data.get("uploader_name", "")
         text = content_data.get("text", "")
         url = content_data.get("url", "")
         pub_time = content_data.get("pub_time", "")
@@ -56,7 +63,10 @@ class WechatChannel(BaseChannel):
         if pub_time:
             description = f"⏰ {pub_time}\n\n{description}"
 
-        title = f"📝 {title}" if title else "📝 新动态"
+        if uploader_name:
+            title = f"📝 [{uploader_name}]{title}" if title else f"📝 [{uploader_name}]新动态"
+        else:
+            title = f"📝 {title}" if title else "📝 新动态"
         picurl = (content_data.get("image_urls") or [""])[0]
         return self._send_article(title, description[:200], url, picurl)
 

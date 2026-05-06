@@ -315,6 +315,7 @@ def process_single_video(bvid: str):
             {
                 "type": "video",
                 "title": video.title,
+                "uploader_name": uploader_name,
                 "summary": summary_data.get("summary", ""),
                 "details": summary_data.get("details", ""),
                 "key_points": summary_data.get("key_points", []),

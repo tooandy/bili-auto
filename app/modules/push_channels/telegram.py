@@ -34,11 +34,15 @@ class TelegramChannel(BaseChannel):
     def _send_video(self, content_data: Dict[str, Any]) -> bool:
         """推送视频消息"""
         title = content_data.get("title", "无标题")
+        uploader_name = content_data.get("uploader_name", "")
         summary = content_data.get("summary", "")
         url = content_data.get("url", "")
         doc_url = content_data.get("doc_url", "")
 
-        text = f"📺 {title}\n\n"
+        if uploader_name:
+            text = f"📺 [{uploader_name}]{title}\n\n"
+        else:
+            text = f"📺 {title}\n\n"
         if summary:
             text += f"{summary[:500]}\n\n"
         text += f"🔗 {url}"
@@ -50,6 +54,7 @@ class TelegramChannel(BaseChannel):
     def _send_dynamic(self, content_data: Dict[str, Any]) -> bool:
         """推送动态消息"""
         title = content_data.get("title", "")
+        uploader_name = content_data.get("uploader_name", "")
         text = content_data.get("text", "")
         url = content_data.get("url", "")
         pub_time = content_data.get("pub_time", "")
@@ -59,11 +64,9 @@ class TelegramChannel(BaseChannel):
         if len(text) > 500:
             display_text += "..."
 
-        # 构建消息，标题在前面（加粗）
-        if title:
-            msg = f"📝 *{title}*\n\n"
-        else:
-            msg = "📝 "
+        # 构建消息
+        title_prefix = f"📝 [{uploader_name}]{title}" if (uploader_name and title) else (f"📝 [{uploader_name}]" if uploader_name else ("📝 " + (title if title else "")))
+        msg = f"{title_prefix}\n\n"
         msg += f"{display_text}\n\n"
         if pub_time:
             msg += f"⏰ {pub_time}\n"

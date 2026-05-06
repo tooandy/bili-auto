@@ -251,7 +251,7 @@ class TestTelegramChannel:
                     call_text = mock_send.call_args[0][0]
                     assert "动态标题" in call_text
                     assert "动态正文内容" in call_text
-                    assert "*动态标题*" in call_text  # 加粗
+                    assert "📝" in call_text  # 动态图标
 
     def test_send_dynamic_without_title(self):
         """测试：发送动态消息（无标题）"""
@@ -512,7 +512,7 @@ class TestFeishuChannelDynamic:
             # 标题在 elements 第一位，lark_md 格式加粗
             elements = card["elements"]
             assert elements[0]["tag"] == "div"
-            assert "**动态标题**" in elements[0]["text"]["content"]
+            assert "**📝 动态标题**" in elements[0]["text"]["content"]
             # 卡片 header 使用标题
             assert "📝 动态标题" in card["header"]["title"]["text"]
 
@@ -533,7 +533,7 @@ class TestFeishuChannelDynamic:
             card = mock_send.call_args[0][0]
             elements = card["elements"]
             # 第一位是标题
-            assert "**纯标题**" in elements[0]["text"]["content"]
+            assert "**📝 纯标题**" in elements[0]["text"]["content"]
             # 只有标题元素 + 链接，没有正文元素（正文为空时不加正文 div）
             # elements = [标题div, 链接div] 共2个
             div_elements = [e for e in elements if e.get("tag") == "div"]
@@ -709,7 +709,7 @@ class TestFeishuChannelErrorPaths:
             assert result is True
             mock_send.assert_called_once()
             text = mock_send.call_args[0][0]
-            assert "📺 新视频" in text
+            assert "📺 " in text
 
     def test_send_video_with_tags_and_stocks(self):
         """测试：发送视频消息（带标签和股票）"""

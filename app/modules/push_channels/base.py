@@ -23,6 +23,7 @@ class BaseChannel(ABC):
                 - pub_time: 发布时间字符串
                 - tags: 标签列表
                 - stocks: 股票列表
+                - uploader_name: UP主名字（可选）
 
         Returns:
             bool: 是否发送成功

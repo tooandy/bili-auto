@@ -150,6 +150,7 @@ def check_new_dynamics():
                 pub_time_str = str(dyn["pub_time"]) if dyn.get("pub_time") else ""
                 push_content({
                     "type": "dynamic",
+                    "uploader_name": dyn.get("sub_name", ""),
                     "title": dyn.get("title", ""),
                     "text": dyn.get("text", ""),
                     "images": dyn.get("images", []),
