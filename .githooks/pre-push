@@ -1,0 +1,37 @@
+#!/bin/sh
+
+# Pre-push hook to run CI checks before pushing
+# Runs linting and unit tests to catch issues before they reach CI
+
+echo "Running pre-push checks..."
+
+# Change to repo root
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT"
+
+# Check if uv is available
+if ! command -v uv &> /dev/null; then
+    echo "uv not found, skipping pre-push checks"
+    exit 0
+fi
+
+# Run ruff linter (same as CI)
+echo "Running ruff linter..."
+uv run ruff check app/
+if [ $? -ne 0 ]; then
+    echo "Lint check failed! Fix errors before pushing."
+    exit 1
+fi
+
+# Run unit tests (same as CI)
+echo "Running unit tests..."
+uv run pytest tests/ \
+    --ignore=tests/test_feishu_docs_integration.py \
+    --ignore=tests/integration/
+if [ $? -ne 0 ]; then
+    echo "Unit tests failed! Fix errors before pushing."
+    exit 1
+fi
+
+echo "Pre-push checks passed!"
+exit 0
