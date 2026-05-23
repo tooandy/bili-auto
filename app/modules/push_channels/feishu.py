@@ -93,6 +93,8 @@ class FeishuChannel(BaseChannel):
             return self._send_video(content_data)
         elif content_type == "dynamic":
             return self._send_dynamic(content_data)
+        elif content_type == "cookie_error":
+            return self._send_cookie_error(content_data)
         else:
             logger.warning("未知的推送类型: %s", content_type)
             return False
@@ -205,6 +207,38 @@ class FeishuChannel(BaseChannel):
                 "template": "blue"
             },
             "elements": elements
+        }
+
+        return self._send_card(card)
+
+    def _send_cookie_error(self, content_data: Dict[str, Any]) -> bool:
+        """推送 Cookie 错误通知"""
+        title = content_data.get("title", "Cookie 已过期")
+        text = content_data.get("text", "")
+
+        card = {
+            "config": {"wide_screen_mode": True},
+            "header": {
+                "title": {"tag": "plain_text", "text": f"⚠️ {title}"},
+                "template": "red"
+            },
+            "elements": [
+                {
+                    "tag": "div",
+                    "text": {"tag": "lark_md", "content": text}
+                },
+                {
+                    "tag": "div",
+                    "text": {"tag": "lark_md", "content": "**请重新运行 `bili-login` 获取新 Cookie**"}
+                },
+                {
+                    "tag": "hr"
+                },
+                {
+                    "tag": "note",
+                    "text": {"tag": "plain_text", "content": "由 bili-auto 自动发送"}
+                }
+            ]
         }
 
         return self._send_card(card)

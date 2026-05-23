@@ -24,3 +24,7 @@ models
 pten_keys.ini
 pten.log
 pten_token.json
+
+# Local Docker Compose
+docker-compose.local.yml
+docker-compose.watchtower.local.yml

@@ -167,39 +167,10 @@ def push_qr_to_telegram(qrcode_key: str, qrcode_url: str) -> bool:
 
 
 def save_to_env(refresh_token: str, cookie: str = None) -> bool:
-    """保存 refresh_token 和 cookie 到 .env"""
-    try:
-        env_file = Path(__file__).parent.parent / ".env"
-        if not env_file.exists():
-            env_file = Path.cwd() / ".env"
-
-        env_lines = []
-        if env_file.exists():
-            with open(env_file, "r", encoding="utf-8") as f:
-                env_lines = f.readlines()
-
-        found_refresh = False
-        found_cookie = False
-        for i, line in enumerate(env_lines):
-            if line.startswith("refresh_token="):
-                env_lines[i] = f'refresh_token="{refresh_token}"\n'
-                found_refresh = True
-            elif line.startswith("BILIBILI_COOKIE=") and cookie:
-                env_lines[i] = f'BILIBILI_COOKIE="{cookie}"\n'
-                found_cookie = True
-
-        if not found_refresh:
-            env_lines.append(f'refresh_token="{refresh_token}"\n')
-        if not found_cookie and cookie:
-            env_lines.append(f'BILIBILI_COOKIE="{cookie}"\n')
-
-        with open(env_file, "w", encoding="utf-8") as f:
-            f.writelines(env_lines)
-
-        return True
-    except Exception as e:
-        typer.echo(f"保存失败: {e}")
-        return False
+    """保存 refresh_token 和 cookie 到 .env（代理到 login 模块）"""
+    from app.modules.login import save_login_to_env as _save
+    env_path = str(Path(__file__).parent.parent / ".env")
+    return _save(refresh_token, cookie, env_path)
 
 
 # ============================================================================
@@ -214,27 +185,18 @@ def login():
     二维码会推送到已配置的飞书/Telegram频道，
     也可以直接查看终端中的二维码链接。
     """
+    from app.modules.login import generate_qrcode, poll_login_status
+
     typer.echo("B站扫码登录 - 获取 refresh_token 和 Cookie")
     typer.echo("=" * 60)
 
-    url = "https://passport.bilibili.com/x/passport-login/web/qrcode/generate"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
-        "Referer": "https://www.bilibili.com/",
-    }
-    resp = requests.get(url, headers=headers)
-
-    if resp.status_code != 200:
-        typer.echo(f"申请二维码失败: HTTP {resp.status_code}")
+    # 生成二维码
+    result = generate_qrcode()
+    if not result:
+        typer.echo("申请二维码失败")
         raise typer.Exit(1)
 
-    data = resp.json()
-    if data["code"] != 0:
-        typer.echo(f"申请二维码失败: {data}")
-        raise typer.Exit(1)
-
-    qrcode_key = data["data"]["qrcode_key"]
-    qrcode_url = f"https://account.bilibili.com/h5/account-h5/auth/scan-web?qrcode_key={qrcode_key}"
+    qrcode_key, qrcode_url = result
 
     typer.echo("正在推送二维码到各渠道...")
     typer.echo("=" * 60)
@@ -255,73 +217,25 @@ def login():
     typer.echo("请使用 B站 App 扫码登录")
     typer.echo("=" * 60)
 
-    poll_url = "https://passport.bilibili.com/x/passport-login/web/qrcode/poll"
-    poll_params = {"qrcode_key": qrcode_key}
+    # 轮询登录状态（最多 6 分钟）
+    success, refresh_token, cookie = poll_login_status(qrcode_key)
 
-    for i in range(180):
-        resp = requests.get(poll_url, params=poll_params, headers=headers)
+    if success:
+        typer.echo("\n✓ 登录成功!")
+        typer.echo(f"refresh_token: {refresh_token[:50]}...")
 
-        if resp.status_code != 200:
-            time.sleep(2)
-            continue
+        if cookie:
+            typer.echo(f"获取到新 Cookie")
+            save_to_env(refresh_token, cookie)
+        else:
+            save_to_env(refresh_token)
 
-        try:
-            result = resp.json()
-        except Exception:
-            time.sleep(2)
-            continue
+        typer.echo("\n完成！refresh_token 和 Cookie 已保存到 .env")
+        raise typer.Exit(0)
 
-        top_code = result.get("code")
-        data = result.get("data", {})
-        refresh_token = data.get("refresh_token", "") if isinstance(data, dict) else ""
-
-        if top_code == 0 and refresh_token:
-            typer.echo("\n✓ 登录成功!")
-            typer.echo(f"refresh_token: {refresh_token[:50]}...")
-
-            cookies = resp.cookies
-            cookie_dict = {}
-            for key in cookies.keys():
-                cookie_dict[key] = cookies.get(key)
-
-            if isinstance(data, dict) and data.get("cookie"):
-                resp_cookie = data.get("cookie")
-                for item in resp_cookie.split(";"):
-                    item = item.strip()
-                    if "=" in item:
-                        k, v = item.split("=", 1)
-                        cookie_dict[k.strip()] = v.strip()
-
-            if cookie_dict:
-                full_cookie = "; ".join([f"{k}={v}" for k, v in cookie_dict.items()])
-                typer.echo(f"获取到新 Cookie: {list(cookie_dict.keys())}")
-                save_to_env(refresh_token, full_cookie)
-            else:
-                save_to_env(refresh_token)
-
-            typer.echo("\n完成！refresh_token 和 Cookie 已保存到 .env")
-            raise typer.Exit(0)
-
-        data_code = data.get("code") if isinstance(data, dict) else None
-        data_msg = data.get("message", "") if isinstance(data, dict) else ""
-        code = top_code if top_code is not None else data_code
-        msg = data_msg or result.get("message", "")
-
-        if code == 86101:
-            if i % 10 == 0:
-                typer.echo("等待扫码...")
-        elif code == 86090:
-            typer.echo("已扫码，请确认登录...")
-        elif code == 86038:
-            typer.echo("二维码过期，请重新生成...")
-            raise typer.Exit(1)
-        elif code != 0:
-            typer.echo(f"状态码: {code}, 消息: {msg}")
-
-        time.sleep(2)
-
-    typer.echo("\n超时，扫码失败")
-    raise typer.Exit(1)
+    else:
+        typer.echo("\n超时，扫码失败")
+        raise typer.Exit(1)
 
 
 # ============================================================================
