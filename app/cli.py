@@ -225,7 +225,7 @@ def login():
         typer.echo(f"refresh_token: {refresh_token[:50]}...")
 
         if cookie:
-            typer.echo(f"获取到新 Cookie")
+            typer.echo("获取到新 Cookie")
             save_to_env(refresh_token, cookie)
         else:
             save_to_env(refresh_token)

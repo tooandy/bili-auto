@@ -144,7 +144,6 @@ def save_login_to_env(refresh_token: str, cookie: str = None, env_path: str = ".
         是否成功
     """
     from pathlib import Path
-    import os
 
     try:
         env_file = Path(env_path)
