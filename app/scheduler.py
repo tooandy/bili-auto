@@ -40,11 +40,15 @@ def _check_and_reload_env():
         load_dotenv(dotenv_path=_env_file_path)
         _env_last_mtime = current_mtime
 
-        # 检查 Cookie 是否真的变了
-        current_cookie = Config.BILIBILI_COOKIE
-        if current_cookie != _last_cookie:
-            logger.info("检测到 .env 中 Cookie 变化，将在下个检测周期生效")
-            _last_cookie = current_cookie
+        # 重新读取 .env 中的 Cookie 并更新 Config
+        from config import Config
+        import os
+        new_cookie = os.getenv("BILIBILI_COOKIE", "")
+        if new_cookie != _last_cookie:
+            Config.BILIBILI_COOKIE = new_cookie
+            logger.info("检测到 .env 中 Cookie 变化，已更新 Config")
+            logger.info("[文件监控] .env 变化已加载，新 Cookie 将立即生效")
+            _last_cookie = new_cookie
         else:
             logger.info(".env 文件已重载（Cookie 未变化）")
         return True
